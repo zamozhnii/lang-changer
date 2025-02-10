@@ -1,21 +1,26 @@
-# name: custom-html-lang
-# about: Устанавливает lang="fr" для категории French Forum до загрузки страницы
+# name: lang_changer
+# about: Change localization
 # version: 0.1
-# authors: Your Name
+# authors: IDW
+# url: https://github.com/zamozhnii/lang-changer
 
-enabled_site_setting :enabled
+enabled_site_setting :lang_changer_enabled
 
-after_initialize do
-  # Обрабатываем запрос и добавляем lang="fr" для категории French Forum
-  on(:before_render) do |controller|
-    # Проверяем, если это категория French Forum (предположим, что ID категории = 10)
-    if controller.params[:category_id]
-      category = Category.find_by(id: controller.params[:category_id])
-      
-      if category && category.name == 'French Forum'
-        # Добавляем lang="fr" до загрузки страницы
-        controller.response.headers["X-Content-Language"] = "fr"
-      end
-    end
-  end
-end
+   after_initialize do
+     # настраиваем поведение до инициализации основных компонентов
+
+     # добавляем обработчик маршрутов
+     add_to_class(:guardian, :is_french_forum?) do |category_id|
+       category = Category.find_by(id: category_id)
+       category && category.name == "French Forum"
+     end
+
+     # изменяем lang атрибут на необходимый перед рендерингом страницы
+     register_html_builder('server:before-head-close') do |controller, _|
+       if controller.guardian.is_french_forum?(controller.request.params[:category_id])
+         "<script>document.documentElement.setAttribute('lang', 'fr');</script>"
+       else
+         "<script>document.documentElement.setAttribute('lang', 'en');</script>"
+       end
+     end
+   end
